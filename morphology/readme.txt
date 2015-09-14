@@ -1,0 +1,1 @@
+attached are the raw data for biomass and cob characteristics from the 2014 grow-out for maize in early Holocene vs. modern, which are the maize plants the gene expression results come from. We're doing tables and figures from them for the gene expression pub now. Maize was shorter-statured and much less productive in terms of seed yield and biomass in early Holocene conditions. 

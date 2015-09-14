@@ -1,0 +1,81 @@
+---
+title: "dolores"
+output: html_document
+---
+Load libraries
+```{r}
+library(dplyr)
+library(magrittr)
+```
+
+Load Anne's DESeq results. These lists include all genes.  
+Notes:  
+
+ * I replace log2FoldChange with 0 for all genes with baseMean==0. These used to be marked NA but we want to include in permutations and note that they show no difference.
+ * in code below, I redo FDR and adjusted pvalues. I think these were wrong?  
+
+```{r}
+teo<-read.table("~/Desktop/teo_anne.csv",header=T,sep=",") %>% mutate(padj=p.adjust(pvalue,method="fdr"))
+maize<-read.table("~/Desktop/maize_anne.csv",header=T,sep=",") %>% mutate(padj=p.adjust(pvalue,method="fdr"))
+anne<-merge(teo,maize,by.x="gene",by.y="gene",suffixes=c(".teo",".maize")) %>% mutate(log2FoldChange.maize=ifelse(is.na(log2FoldChange.maize),0,log2FoldChange.maize), log2FoldChange.teo=ifelse(is.na(log2FoldChange.teo),0,log2FoldChange.teo))
+```
+
+Load Zak Lemmon's allele specific expression results and combine with Anne's. We lose some genes -- down to ~25K.  
+Notes:  
+
+ * I add a pseudocount of 1 to Zak's leaf (for now) data to avoid 0 expression giving "Inf" values.  
+
+
+```{r}
+zak<-read.csv("~/Desktop/DE_analaysis.csv",header=T) %>% mutate(ParentMaize.Leaf=ifelse(ParentMaize.Leaf==0,1,ParentMaize.Leaf),ParentTeosinte.Leaf=ifelse(ParentTeosinte.Leaf==0,1,ParentTeosinte.Leaf))
+zam<-merge(anne,zak,by.x="gene",by.y="Gene") 
+```
+
+How many teosinte DE genes? 
+
+```{r}
+length(filter(zam,zam$padj.teo<0.05)[,1])
+```
+
+How many of those are *not* DE in maize? 
+
+```{r}
+length(filter(zam,zam$padj.teo<=0.05,zam$padj.maize>0.05)[,1])
+```
+
+And how many are in the same direction in maize vs. teosinte (from Lemmon's data) as they are in modern vs. holocene (from our data)?
+
+```{r}
+length(filter(zam,zam$padj.teo<=0.05,zam$padj.maize>0.05,zam$log2FoldChange.teo*log2(zam$ParentMaize.Leaf/zam$ParentTeosinte.Leaf)>0)[,1])
+```
+
+Let's list those
+```{r}
+zam.candidates<-filter(zam,zam$padj.teo<=0.05,zam$padj.maize>0.05,zam$log2FoldChange.teo*log2(zam$ParentMaize.Leaf/zam$ParentTeosinte.Leaf)>0)
+zam.candidates$gene
+```
+
+How many are also domestication genes. 
+
+```{r}
+length(filter(zam.candidates,Domestication==TRUE)[,1])
+```
+
+Let's list those too
+```{r}
+filter(zam.candidates,Domestication==TRUE)$gene
+```
+
+What percent of random samples of similar size have more domestication genes.
+
+```{r}
+sum(sapply(1:1000,function(x) sum(sample(zam$Domestication,47))>3))/1000
+```
+
+So we have 47 potential assimilation loci and 3 awesome candidates that also show selection.
+
+Finally, because I redid adjusted p-values, here's the list of DE genes in teosinte:
+```{r}
+filter(zam,zam$padj.teo<=0.05)$gene
+```
+
